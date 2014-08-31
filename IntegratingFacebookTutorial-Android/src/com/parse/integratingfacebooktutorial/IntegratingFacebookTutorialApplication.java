@@ -13,8 +13,8 @@ public class IntegratingFacebookTutorialApplication extends Application {
 	public void onCreate() {
 		super.onCreate();
 
-		Parse.initialize(this, "YOUR_PARSE_APPLICATION_ID",
-				"YOUR_PARSE_CLIENT_KEY");
+		Parse.initialize(this, "f9xa4XD1vgXqiTZnSWL1OzA2dY4hTz7EhgcSglws",
+				"uFPvehN7ffe8W5nSAQpqfg5n2LOCGLENHHYmpYVC");
 
 		// Set your Facebook App Id in strings.xml
 		ParseFacebookUtils.initialize(getString(R.string.app_id));

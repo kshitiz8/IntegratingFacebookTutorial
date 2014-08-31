@@ -6,9 +6,11 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.Settings.Secure;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.facebook.FacebookRequestError;
@@ -21,6 +23,14 @@ import com.parse.ParseFacebookUtils;
 import com.parse.ParseUser;
 
 public class UserDetailsActivity extends Activity {
+	private static final String TAG = "UserDetailsActivity";
+
+	public static final String USER_APP_CLASS = "UserApp";
+	public static final String APP_CLASS = "App";
+
+
+
+	private ParseUser currentUser = null;
 
 	private ProfilePictureView userProfilePictureView;
 	private TextView userNameView;
@@ -28,14 +38,15 @@ public class UserDetailsActivity extends Activity {
 	private TextView userGenderView;
 	private TextView userDateOfBirthView;
 	private TextView userRelationshipView;
+	private ImageView appIcon;
 	private Button logoutButton;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.userdetails);
-
+		appIcon =  (ImageView) findViewById(R.id.app_icon);
 		userProfilePictureView = (ProfilePictureView) findViewById(R.id.userProfilePicture);
 		userNameView = (TextView) findViewById(R.id.userName);
 		userLocationView = (TextView) findViewById(R.id.userLocation);
@@ -50,6 +61,33 @@ public class UserDetailsActivity extends Activity {
 				onLogoutButtonClicked();
 			}
 		});
+		//		ParseQuery<ParseObject> query = ParseQuery.getQuery("Peter");
+		////		query.whereEqualTo("", "bar");
+		//		query.findInBackground(new FindCallback<ParseObject>() {
+		//		    public void done(List<ParseObject> testObjects, ParseException e) {
+		//		        if (e == null) {
+		//		            Log.d("score", "Retrieved " + testObjects.size() + " scores");
+		//		            for(ParseObject po : testObjects){
+		//		            	Log.d(TAG, po.getString("foo"));
+		//		            }
+		//		        } else {
+		//		            Log.d("score", "Error: " + e.getMessage());
+		//		        }
+		//		    }
+		//		});
+
+
+		//		//Fetch user firend's info from facebook
+		//		Request.newMyFriendsRequest(ParseFacebookUtils.getSession(),  new Request.GraphUserListCallback() {
+		//			@Override
+		//			public void onCompleted(List<GraphUser> users, Response response){
+		//				Log.v(TAG, response.toString());
+		//				for (GraphUser graphUser : users) {
+		//					Log.v(TAG, graphUser.getFirstName());
+		//				}
+		//			}
+		//		}
+		//				).executeAsync();
 
 		// Fetch Facebook user info if the session is active
 		Session session = ParseFacebookUtils.getSession();
@@ -61,12 +99,17 @@ public class UserDetailsActivity extends Activity {
 	@Override
 	public void onResume() {
 		super.onResume();
+		proceedWithValidSession();
+	}
 
-		ParseUser currentUser = ParseUser.getCurrentUser();
-		if (currentUser != null) {
-			// Check if the user is currently logged
-			// and show any cached content
+	private void proceedWithValidSession(){
+		currentUser = ParseUser.getCurrentUser();
+		if (currentUser != null) {			
 			updateViewsWithProfileInfo();
+			//invoke card activity here 
+			callAppUploaderActivity();
+
+
 		} else {
 			// If the user is not logged in, go to the
 			// activity showing the login view.
@@ -74,71 +117,73 @@ public class UserDetailsActivity extends Activity {
 		}
 	}
 
+
+
 	private void makeMeRequest() {
-		Request request = Request.newMeRequest(ParseFacebookUtils.getSession(),
-				new Request.GraphUserCallback() {
-					@Override
-					public void onCompleted(GraphUser user, Response response) {
-						if (user != null) {
-							// Create a JSON object to hold the profile info
-							JSONObject userProfile = new JSONObject();
-							try {
-								// Populate the JSON object
-								userProfile.put("facebookId", user.getId());
-								userProfile.put("name", user.getName());
-								if (user.getLocation().getProperty("name") != null) {
-									userProfile.put("location", (String) user
-											.getLocation().getProperty("name"));
-								}
-								if (user.getProperty("gender") != null) {
-									userProfile.put("gender",
-											(String) user.getProperty("gender"));
-								}
-								if (user.getBirthday() != null) {
-									userProfile.put("birthday",
-											user.getBirthday());
-								}
-								if (user.getProperty("relationship_status") != null) {
-									userProfile
-											.put("relationship_status",
-													(String) user
-															.getProperty("relationship_status"));
-								}
 
-								// Save the user profile info in a user property
-								ParseUser currentUser = ParseUser
-										.getCurrentUser();
-								currentUser.put("profile", userProfile);
-								currentUser.saveInBackground();
-
-								// Show the user info
-								updateViewsWithProfileInfo();
-							} catch (JSONException e) {
-								Log.d(IntegratingFacebookTutorialApplication.TAG,
-										"Error parsing returned user data.");
-							}
-
-						} else if (response.getError() != null) {
-							if ((response.getError().getCategory() == FacebookRequestError.Category.AUTHENTICATION_RETRY)
-									|| (response.getError().getCategory() == FacebookRequestError.Category.AUTHENTICATION_REOPEN_SESSION)) {
-								Log.d(IntegratingFacebookTutorialApplication.TAG,
-										"The facebook session was invalidated.");
-								onLogoutButtonClicked();
-							} else {
-								Log.d(IntegratingFacebookTutorialApplication.TAG,
-										"Some other error: "
-												+ response.getError()
-														.getErrorMessage());
-							}
+		Request request = Request.newMeRequest(ParseFacebookUtils.getSession(),new Request.GraphUserCallback() {
+			@Override
+			public void onCompleted(GraphUser user, Response response) {
+				if (user != null) {
+					// Create a JSON object to hold the profile info
+					JSONObject userProfile = new JSONObject();
+					try {
+						// Populate the JSON object
+						userProfile.put("facebookId", user.getId());
+						userProfile.put("name", user.getName());
+						if (user.getLocation().getProperty("name") != null) {
+							userProfile.put("location", (String) user
+									.getLocation().getProperty("name"));
 						}
+						if (user.getProperty("gender") != null) {
+							userProfile.put("gender",
+									(String) user.getProperty("gender"));
+						}
+						if (user.getBirthday() != null) {
+							userProfile.put("birthday",
+									user.getBirthday());
+						}
+						if (user.getProperty("relationship_status") != null) {
+							userProfile
+							.put("relationship_status",
+									(String) user
+									.getProperty("relationship_status"));
+						}
+
+						// Save the user profile info in a user property
+
+						ParseUser currentUser = ParseUser
+								.getCurrentUser();
+						currentUser.put("profile", userProfile);
+						currentUser.saveInBackground();
+
+						// 
+						proceedWithValidSession();
+					} catch (JSONException e) {
+						Log.d(IntegratingFacebookTutorialApplication.TAG,
+								"Error parsing returned user data.");
 					}
-				});
+
+				} else if (response.getError() != null) {
+					if ((response.getError().getCategory() == FacebookRequestError.Category.AUTHENTICATION_RETRY)
+							|| (response.getError().getCategory() == FacebookRequestError.Category.AUTHENTICATION_REOPEN_SESSION)) {
+						Log.d(IntegratingFacebookTutorialApplication.TAG,
+								"The facebook session was invalidated.");
+						onLogoutButtonClicked();
+					} else {
+						Log.d(IntegratingFacebookTutorialApplication.TAG,
+								"Some other error: "
+										+ response.getError()
+										.getErrorMessage());
+					}
+				}
+			}
+		});
 		request.executeAsync();
 
 	}
 
 	private void updateViewsWithProfileInfo() {
-		ParseUser currentUser = ParseUser.getCurrentUser();
 		if (currentUser.get("profile") != null) {
 			JSONObject userProfile = currentUser.getJSONObject("profile");
 			try {
@@ -185,6 +230,7 @@ public class UserDetailsActivity extends Activity {
 		}
 	}
 
+	
 	private void onLogoutButtonClicked() {
 		// Log the user out
 		ParseUser.logOut();
@@ -198,5 +244,11 @@ public class UserDetailsActivity extends Activity {
 		intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		startActivity(intent);
+	}
+	
+	private void callAppUploaderActivity() {
+		AppUploaderService a = new AppUploaderService(Secure.getString(getBaseContext().getContentResolver(),Secure.ANDROID_ID),
+				getPackageManager());
+		a.uploadUserApps();
 	}
 }

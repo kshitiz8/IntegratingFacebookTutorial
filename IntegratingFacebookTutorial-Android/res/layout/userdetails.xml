@@ -11,6 +11,12 @@
             android:layout_marginTop="20dp"
             android:gravity="center_horizontal"
             android:orientation="horizontal" >
+            <ImageView
+				android:id="@+id/app_icon"
+				android:layout_width="50dp"
+				android:layout_height="50dp"
+				android:padding="3dp"
+				android:scaleType="centerCrop" />
             <com.facebook.widget.ProfilePictureView
                 android:id="@+id/userProfilePicture"
                 android:layout_height="wrap_content"
