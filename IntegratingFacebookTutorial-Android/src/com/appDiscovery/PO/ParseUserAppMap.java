@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
@@ -12,6 +13,10 @@ import com.parse.ParseUser;
 public class ParseUserAppMap extends BasePO{
 	public ParseUserAppMap(){
 		super(OBJECT_NAME);
+	}
+	
+	public ParseUserAppMap(ParseObject parseObject) {
+		super(parseObject);
 	}
 	
 	public static final String OBJECT_NAME = "UserApp";
@@ -31,7 +36,7 @@ public class ParseUserAppMap extends BasePO{
 		return new ParseApp((ParseObject)this.parseObject.getParseObject(APP));
 	}
 	public void setParseApp(ParseApp parseApp) {
-		 this.parseObject.put(APP, parseApp);
+		 this.parseObject.put(APP, parseApp.getParseObject());
 		 this.parseObject.put(APP_ID, parseApp.getAppId());
 	}
 	public ParseUser getParseUser() {
@@ -53,9 +58,20 @@ public class ParseUserAppMap extends BasePO{
 	public static void findParseUserAppsInBackground(ParseUser parseUser, FindCallback<ParseUserAppMap> callback){
 		ParseQuery<ParseObject> query = ParseQuery.getQuery(OBJECT_NAME);
 		query.whereEqualTo(USER, parseUser.get("objectId"));
-		query.findInBackground(BasePO.getParseFindCallback(OBJECT_NAME, callback));
+		query.findInBackground(BasePO.getParseFindCallback(OBJECT_NAME, callback,ParseUserAppMap.class));
 
 	}
+	/*
+	 * 
+	 */
+	public static List<ParseUserAppMap> findParseUserApps(ParseUser parseUser) throws ParseException{
+		ParseQuery<ParseObject> query = ParseQuery.getQuery(OBJECT_NAME);
+		query.whereEqualTo(USER, parseUser.get("objectId"));
+		return parseObjectToParseUserAppMap(query.find());
+		
+
+	}
+
 	/*
 	 * returns parse UserApps for a list of parseusers
 	 */
@@ -69,7 +85,7 @@ public class ParseUserAppMap extends BasePO{
 		
 		ParseQuery<ParseObject> query = ParseQuery.getQuery(OBJECT_NAME);
 		query.whereContainedIn(USER, parseUserObjectIds);
-		query.findInBackground(BasePO.getParseFindCallback(OBJECT_NAME, callback));
+		query.findInBackground(BasePO.getParseFindCallback(OBJECT_NAME, callback,ParseUserAppMap.class));
 
 	}
 	
@@ -92,5 +108,15 @@ public class ParseUserAppMap extends BasePO{
 		q.setLimit(n);
 		q.findInBackground( callback);
 	}
+	
+	public static List<ParseUserAppMap> parseObjectToParseUserAppMap(List<ParseObject> parseObjectList){
+		List<ParseUserAppMap> parseUserAppMapList = new ArrayList<ParseUserAppMap>(); 
+		for(ParseObject po: parseObjectList){
+			ParseUserAppMap puam = new ParseUserAppMap(po);
+			parseUserAppMapList.add(puam);
+		}
+		return parseUserAppMapList;
+	}
+	
 	
 }

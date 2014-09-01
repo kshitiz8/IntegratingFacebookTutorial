@@ -107,7 +107,7 @@ public class UserDetailsActivity extends Activity {
 		if (currentUser != null) {			
 			updateViewsWithProfileInfo();
 			//invoke card activity here 
-			callAppUploaderActivity();
+			callAppUploaderService();
 
 
 		} else {
@@ -246,9 +246,11 @@ public class UserDetailsActivity extends Activity {
 		startActivity(intent);
 	}
 	
-	private void callAppUploaderActivity() {
-		AppUploaderService a = new AppUploaderService(Secure.getString(getBaseContext().getContentResolver(),Secure.ANDROID_ID),
-				getPackageManager());
-		a.uploadUserApps();
+	private void callAppUploaderService() {
+		Intent appUploaderService = new Intent(this, AppUploaderService.class);
+	    startService(appUploaderService);
+	    
+	    
+	    
 	}
 }

@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.parse.ParseException;
 
-public interface FindCallback<T extends BasePO>  {
-	public void done(List<T > objects, ParseException e);
-	
+public abstract class FindCallback<T extends BasePO>  {
+	public abstract void done(List<T > objects, ParseException e);
 }

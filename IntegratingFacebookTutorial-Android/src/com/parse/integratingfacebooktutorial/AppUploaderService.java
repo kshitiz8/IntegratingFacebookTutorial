@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import android.app.Service;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.IBinder;
+import android.provider.Settings.Secure;
 import android.util.Log;
 
 import com.appDiscovery.PO.BasePO;
@@ -16,38 +20,62 @@ import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseUser;
 
-public class AppUploaderService {
-	private static final String TAG = "AppUploader";
-	
+public class AppUploaderService extends Service {
+	private static final String TAG = "AppUploaderService";
+	private int state = 0;
+
 	private ParseUser currentUser = null;
 	private String deviceId = null;
 	private PackageManager packageManager = null; 
-	
-	
-	
-	public AppUploaderService(String deviceId,PackageManager packageManager ) {
-		currentUser = ParseUser.getCurrentUser();
-		this.packageManager = packageManager;
-		this.deviceId = deviceId;
-		uploadUserApps();
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		return null;
 	}
-	
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		//handleCommand(intent);
+		Log.d(TAG,"AppUploaderService onStartCommand");
+		if(state == 0){
+			state =1;
+			Log.d(TAG,"AppUploaderService state incative, calling ");
+			currentUser = ParseUser.getCurrentUser();
+			this.packageManager = getPackageManager();
+			this.deviceId = Secure.getString(getBaseContext().getContentResolver(),Secure.ANDROID_ID);
+			new Thread(new Runnable() {
+				public void run() {
+					uploadUserApps();
+					try {
+						Thread.sleep(300000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					Log.d(TAG,"AppUploaderService shutting down...");
+					stopSelf();
+				}
+			}).start();
+		}else{
+			Log.d(TAG,"AppUploaderService state active, no need to do anything");
+
+		}
+		return 1;
+	}
+
+
 	public void uploadUserApps() {
 		if (currentUser.get("profile") != null) {
-			ParseUserAppMap.findParseUserAppsInBackground(currentUser, 
-					new FindCallback<ParseUserAppMap>() {
-				@Override
-				public void done(List<ParseUserAppMap> userAppsFromServer, ParseException e) {
-					if(e == null){
-						List<ApplicationInfo> newInstalledAppList = getNewInstalledApps(userAppsFromServer);
-						persistNewInstalledApps(newInstalledAppList);
-					}else{ 
-						Log.e(TAG, e.getMessage());
-						Log.e(TAG, "---------uploadUserApps-------");
-					}
+			List<ParseUserAppMap> userAppsFromServer;
+			try {
+				userAppsFromServer = ParseUserAppMap.findParseUserApps(currentUser);
+				for(ParseUserAppMap app : userAppsFromServer){
+					Log.e(TAG,app.getParseAppId());
 				}
-			});
-
+				List<ApplicationInfo> newInstalledAppList = this.getNewInstalledApps(userAppsFromServer);
+				this.persistNewInstalledApps(newInstalledAppList);
+			} catch (ParseException e) {
+				Log.e(TAG, "unable to bring user apps from server");
+				stopSelf();
+			}
 		}
 	}
 
@@ -64,23 +92,22 @@ public class AppUploaderService {
 
 		}
 		//save new apps if any to App dimension
-		ParseApp.loadParseAppInBackground(appList, new FindCallback<ParseApp>() {
 
-			@Override
-			public void done(List<ParseApp> objects, ParseException e) {
-				ArrayList<ParseUserAppMap> userAppMapList = new ArrayList<ParseUserAppMap>();
-				for(ParseApp parseApp: objects){
-					ParseUserAppMap userAppMap = new ParseUserAppMap();
-					userAppMap.setParseApp(parseApp);
-					userAppMap.setParseUser(currentUser);
-					userAppMap.setDeviceId(deviceId);
-					userAppMapList.add(userAppMap);
-				}
-				ParseObject.saveAllInBackground(BasePO.getPOList(userAppMapList));
+		try {
+			List<ParseApp> parseAppList = ParseApp.loadParseApp(appList);
+			ArrayList<ParseUserAppMap> userAppMapList = new ArrayList<ParseUserAppMap>();
+			for(ParseApp parseApp: parseAppList){
+				ParseUserAppMap userAppMap = new ParseUserAppMap();
+				userAppMap.setParseApp(parseApp);
+				userAppMap.setParseUser(currentUser);
+				userAppMap.setDeviceId(deviceId);
+				userAppMapList.add(userAppMap);
 			}
-		});
-
-
+			ParseObject.saveAll(BasePO.getPOList(userAppMapList));
+		} catch (ParseException e) {
+			Log.e(TAG, "unable to load app detail from server");
+			stopSelf();
+		}
 	}
 
 	private List<ApplicationInfo> getNewInstalledApps(List<ParseUserAppMap> userAppsFromServer){
@@ -109,6 +136,5 @@ public class AppUploaderService {
 		}
 		return filteredApps;
 	}
-
 
 }

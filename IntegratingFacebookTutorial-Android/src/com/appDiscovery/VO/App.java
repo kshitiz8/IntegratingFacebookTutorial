@@ -58,8 +58,4 @@ public class App {
 	public void setFriendLikes(long friendLikes) {
 		this.friendLikes = friendLikes;
 	}
-	
-	
-	
-
 }

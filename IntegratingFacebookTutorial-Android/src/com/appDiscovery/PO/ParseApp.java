@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
@@ -51,7 +52,7 @@ public class ParseApp extends BasePO{
 		}
 		ParseQuery<ParseObject> query = ParseQuery.getQuery(OBJECT_NAME);
 		query.whereContainedIn(APPID, parseAppIds);
-		query.findInBackground(getParseFindCallback(OBJECT_NAME, callback));
+		query.findInBackground(getParseFindCallback(OBJECT_NAME, callback, ParseApp.class));
 
 	}
 	/* Load parseApp from DB 
@@ -63,4 +64,23 @@ public class ParseApp extends BasePO{
 		loadParseAppInBackground(parseApps, callback);
 
 	}
+	public static List<ParseApp> loadParseApp(List<ParseApp> parseApps) throws ParseException{
+		Collection<String> parseAppIds = new ArrayList<String>();
+		for(ParseApp parseApp: parseApps){
+			parseAppIds.add(parseApp.getAppId());
+		}
+		ParseQuery<ParseObject> query = ParseQuery.getQuery(OBJECT_NAME);
+		query.whereContainedIn(APPID, parseAppIds);
+		return parseObjectToParseApp(query.find());
+
+	}
+	public static List<ParseApp> parseObjectToParseApp(List<ParseObject> parseObjectList){
+		List<ParseApp> parseAppList = new ArrayList<ParseApp>(); 
+		for(ParseObject po: parseObjectList){
+			ParseApp pa = new ParseApp(po);
+			parseAppList.add(pa);
+		}
+		return parseAppList;
+	}
+
 }
